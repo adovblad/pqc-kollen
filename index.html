@@ -1,0 +1,216 @@
+<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PQC-kollen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one narrow column, phone first. Hero with timeline, 12 questions in five areas, result card at the end. */
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --ink:#13202C; --muted:#566573; --line:#D5DCE3;
+  --accent:#3550C8; --accent-soft:#E4E8FA;
+  --good:#2C7A57; --warn:#A86B12; --bad:#B03F2C;
+  --display:'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body:'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E151C; --surface:#16202A; --ink:#E5EAEF; --muted:#94A2AF; --line:#2A3743;
+  --accent:#8DA0FF; --accent-soft:#1F2A4A; --good:#5CC495; --warn:#E3A84A; --bad:#EF7F6B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E151C; --surface:#16202A; --ink:#E5EAEF; --muted:#94A2AF; --line:#2A3743;
+  --accent:#8DA0FF; --accent-soft:#1F2A4A; --good:#5CC495; --warn:#E3A84A; --bad:#EF7F6B; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+p{margin:0}
+.mono{font-family:var(--mono);font-size:.88em}
+
+header{padding-top:40px;display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(40px,10vw,64px);font-weight:800;letter-spacing:-.02em}
+.lede{font-size:19px;color:var(--muted);max-width:60ch}
+
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid var(--ink);margin-top:8px}
+.tl{padding:12px 12px 0 0;display:flex;flex-direction:column;gap:4px;position:relative;min-width:0}
+.tl::before{content:"";position:absolute;top:-7px;left:0;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.tl b{font-family:var(--mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.tl span{font-size:14px;color:var(--muted);line-height:1.35}
+.src{font-size:13px;color:var(--muted)}
+
+.progress{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.bar{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.count{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.area{display:flex;flex-direction:column;gap:20px}
+.area h2{font-size:26px;font-weight:600;display:flex;gap:12px;align-items:baseline}
+.area h2 small{font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:400}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+legend{font-weight:600;font-size:18px;padding:0;margin-bottom:10px}
+.hint{font-size:15px;color:var(--muted);margin-top:-6px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt label{display:block;padding:12px 14px;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;cursor:pointer;transition:border-color .15s,background .15s}
+.opt label:hover{border-color:var(--accent)}
+.opt input:focus-visible + label{outline:3px solid var(--accent);outline-offset:2px}
+.opt input:checked + label{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+
+.result{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:22px}
+.result.empty{border-style:dashed}
+.result h2{font-size:30px;font-weight:800}
+.level{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.level .pill{font-family:var(--mono);font-size:13px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.rows{display:flex;flex-direction:column;gap:12px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px;gap:12px;align-items:center}
+.row .name{font-weight:600;min-width:0}
+.row .track{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.row .track i{display:block;height:100%}
+.row .pct{font-family:var(--mono);font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+.next{display:flex;flex-direction:column;gap:14px;padding:0;margin:0;list-style:none;counter-reset:n}
+.next li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;counter-increment:n}
+.next li::before{content:counter(n);font-family:var(--mono);font-weight:600;color:var(--accent);font-size:20px;line-height:1.3}
+.next b{display:block}
+.btn{font:inherit;font-weight:600;padding:10px 16px;border-radius:8px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;align-self:flex-start}
+.btn:hover{background:var(--accent-soft)}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.plan{display:flex;flex-direction:column;gap:16px}
+.plan h2{font-size:26px;font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.step{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.step b{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.06em}
+.step strong{font-size:17px}
+.step span{font-size:15px;color:var(--muted);line-height:1.4}
+@media (max-width:520px){.steps{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr) 80px 44px}}
+
+.contact{border-top:2px solid var(--ink);padding-top:20px;display:flex;flex-direction:column;gap:10px}
+.contact .addr{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.contact code{font-family:var(--mono);font-size:15px;user-select:all;background:var(--surface);border:1px solid var(--line);padding:6px 10px;border-radius:6px;overflow-wrap:anywhere}
+.fine{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head><body>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Övergången till kvantsäker kryptografi · snabbtest</p>
+  <h1>Hur långt har ni kommit med PQC?</h1>
+  <p class="lede">12 frågor, cirka tre minuter. Du får en nivå per område och tre konkreta nästa steg. Inga svar sparas.</p>
+  <div class="timeline" aria-label="Tidslinje för övergången">
+    <div class="tl"><b>2026</b><span>EU: inventering och plan påbörjad</span></div>
+    <div class="tl"><b>2030</b><span>Högriskanvändning och särskilt känslig verksamhet klar</span></div>
+    <div class="tl"><b>2035</b><span>Övergången i stort sett klar</span></div>
+  </div>
+  <p class="src">Källor: EU:s samordnade färdplan för PQC (juni 2025), NCSC Sverige (2026), NIST IR 8547 (utkast).</p>
+</header>
+
+<div class="progress" aria-hidden="true"><div class="bar"><i id="barfill"></i></div><span class="count" id="count">0 av 12 besvarade</span></div>
+
+<form id="quiz" novalidate></form>
+
+<section class="result empty" id="result" aria-live="polite">
+  <h2>Ditt resultat</h2>
+  <p id="resultHint">Svara på alla 12 frågor så visas er nivå här, per område, med förslag på nästa steg.</p>
+</section>
+
+<section class="plan">
+  <h2>Så bygger ni en PQC-plan</h2>
+  <div class="steps">
+    <div class="step"><b>STEG 1</b><strong>Utse en ansvarig</strong><span>Ägarskap på ledningsnivå, kopplat till NIS2-arbetet.</span></div>
+    <div class="step"><b>STEG 2</b><strong>Inventera kryptografin</strong><span>Var används RSA och ECC? TLS, VPN, SSH, PKI, signering, HSM.</span></div>
+    <div class="step"><b>STEG 3</b><strong>Bedöm datans livslängd</strong><span>Information som ska vara hemlig efter 2035 hotas redan i dag (samla nu, dekryptera senare).</span></div>
+    <div class="step"><b>STEG 4</b><strong>Prioritera</strong><span>Högrisk först: lång livslängd, externa gränssnitt, rotcertifikat.</span></div>
+    <div class="step"><b>STEG 5</b><strong>Bygg kryptoagilitet</strong><span>Gör algoritmbyte till konfiguration, inte till nyutveckling.</span></div>
+    <div class="step"><b>STEG 6</b><strong>Ställ krav på leverantörer</strong><span>Färdplan för <span class="mono">ML-KEM</span> och <span class="mono">ML-DSA</span> i upphandling och avtal.</span></div>
+    <div class="step"><b>STEG 7</b><strong>Testa hybrid</strong><span>Pilot med till exempel <span class="mono">X25519MLKEM768</span> i TLS och PQC-stöd i PKI/HSM.</span></div>
+    <div class="step"><b>STEG 8</b><strong>Migrera och följ upp</strong><span>Etappvis utrullning, uppdaterade policyer, löpande uppföljning.</span></div>
+  </div>
+  <p class="fine">Standarder: FIPS 203 (<span class="mono">ML-KEM</span>), FIPS 204 (<span class="mono">ML-DSA</span>), FIPS 205 (<span class="mono">SLH-DSA</span>), publicerade av NIST i augusti 2024.</p>
+</section>
+
+<footer class="contact">
+  <p><strong>Vill du prata vidare?</strong> Anders Dovblad. PKI, HSM och kvantsäker kryptografi.</p>
+  <div class="addr"><code id="mail">anders.dovblad@kvadrat.se</code><button class="btn" type="button" id="copy">Kopiera adress</button></div>
+  <p class="fine">Testet är en förenklad självskattning och ersätter inte en riskanalys.</p>
+</footer>
+</div>
+
+<script>
+const AREAS=[
+ {id:'gov',name:'Styrning',qs:[
+  {q:'Finns en utsedd ansvarig för övergången till kvantsäker kryptografi?',o:['Nej','Diskuterat, inte beslutat','Ja, ansvarig är utsedd','Ja, med plan och budget']},
+  {q:'Är kvanthotet med i er riskanalys eller ert NIS2-arbete?',o:['Nej','Nämns men utan åtgärder','Ja, som identifierad risk','Ja, med åtgärder och uppföljning']}]},
+ {id:'inv',name:'Inventering',qs:[
+  {q:'Vet ni var ni använder kryptografi?',h:'Till exempel TLS, VPN, SSH, PKI, kodsignering, databaser och HSM.',o:['Nej','Delvis, kunskapen finns hos några personer','Lista för de viktigaste systemen','Komplett och underhållen inventering']},
+  {q:'Vet ni vilka algoritmer och nyckellängder som används?',h:'Till exempel RSA-2048 eller ECDSA P-256.',o:['Nej','Några enstaka system','De flesta kritiska system','Ja, med automatisk insamling']},
+  {q:'Har ni överblick över era certifikat och deras livslängd?',o:['Nej','Kalkylblad eller liknande','Delvis i ett CLM-verktyg','Ja, centralt och automatiserat']}]},
+ {id:'risk',name:'Data och risk',qs:[
+  {q:'Vet ni vilken information som måste vara skyddad längre än tio år?',h:'Den riskerar att samlas in i dag och dekrypteras senare.',o:['Nej','Har en känsla för det','Identifierat för viktiga informationsmängder','Klassat och kopplat till system']},
+  {q:'Har ni prioriterat system efter hur bråttom bytet är?',o:['Nej','Informellt','Ja, för en del system','Ja, med hög-, medel- och lågrisk']}]},
+ {id:'tech',name:'Teknik och kryptoagilitet',qs:[
+  {q:'Hur byter ni algoritm i era viktigaste system?',o:['Vet inte','Kräver nyutveckling eller ny version','Manuell konfiguration per system','Centralt styrt']},
+  {q:'Har er PKI och era HSM:er en väg till PQC-algoritmer?',o:['Vet inte','Nej','Leverantören har en uppgraderingsväg','Testat eller i drift']},
+  {q:'Har ni testat hybrid eller PQC någonstans?',h:'Till exempel hybrid nyckelutbyte i TLS eller SSH.',o:['Nej','Planerat','Labb eller pilot','I produktion']}]},
+ {id:'sup',name:'Leverantörer',qs:[
+  {q:'Ställer ni krav på kvantsäker kryptografi vid upphandling?',o:['Nej','Ibland','I nya upphandlingar','Standardkrav i alla avtal']},
+  {q:'Känner ni till leverantörernas PQC-planer för kritiska produkter?',o:['Nej','För någon enstaka','För de flesta kritiska','Ja, dokumenterat och uppföljt']}]}
+];
+const ADVICE={
+ gov:['Utse en ansvarig','Ge en person ansvar på ledningsnivå och lägg kvanthotet i riskanalysen. NCSC rekommenderar det som första steg.'],
+ inv:['Inventera kryptografin','Börja med de system som har externa gränssnitt: TLS, VPN och PKI. Notera algoritm, nyckellängd och ägare.'],
+ risk:['Klassa datans livslängd','Peka ut information som ska vara hemlig efter 2035. Där är risken för samla nu, dekryptera senare störst.'],
+ tech:['Bygg kryptoagilitet','Kontrollera PQC-stöd i PKI och HSM och kör en pilot med hybrid TLS. Målet är att algoritmbyte blir konfiguration.'],
+ sup:['Ställ krav på leverantörer','Fråga kritiska leverantörer efter deras PQC-färdplan och skriv in krav i nya avtal.']
+};
+const LEVELS=[[0,'Nivå 1','Ej påbörjad'],[26,'Nivå 2','Medvetenhet'],[51,'Nivå 3','Kartläggning'],[76,'Nivå 4','Planerad övergång']];
+const TOTAL=AREAS.reduce((n,a)=>n+a.qs.length,0);
+const form=document.getElementById('quiz');
+let k=0;
+AREAS.forEach((a,ai)=>{
+  const sec=document.createElement('section');sec.className='area';
+  sec.innerHTML=`<h2>${a.name}<small>${ai+1}/${AREAS.length}</small></h2>`;
+  a.qs.forEach((q,qi)=>{
+    k++;const name=`${a.id}${qi}`;
+    const fs=document.createElement('fieldset');
+    fs.innerHTML=`<legend>${k}. ${q.q}</legend>`+(q.h?`<p class="hint">${q.h}</p>`:'')+
+      `<div class="opts">${q.o.map((t,v)=>`<div class="opt"><input type="radio" id="${name}_${v}" name="${name}" value="${v}"><label for="${name}_${v}">${t}</label></div>`).join('')}</div>`;
+    sec.appendChild(fs);
+  });
+  form.appendChild(sec);
+});
+function color(p){return p>=67?'var(--good)':p>=34?'var(--warn)':'var(--bad)'}
+function update(){
+  const fd=new FormData(form);let answered=0;
+  const scores=AREAS.map(a=>{let s=0,n=0;a.qs.forEach((_,qi)=>{const v=fd.get(`${a.id}${qi}`);if(v!==null){answered++;s+=+v;n++}});return{a,s,max:a.qs.length*3,done:n===a.qs.length}});
+  document.getElementById('barfill').style.width=(answered/TOTAL*100)+'%';
+  document.getElementById('count').textContent=`${answered} av ${TOTAL} besvarade`;
+  const res=document.getElementById('result');
+  if(answered<TOTAL){
+    res.classList.add('empty');
+    res.innerHTML=`<h2>Ditt resultat</h2><p>Svara på alla ${TOTAL} frågor så visas er nivå här, per område, med förslag på nästa steg. ${answered?`Det återstår ${TOTAL-answered}.`:''}</p>`;
+    return;
+  }
+  const tot=Math.round(scores.reduce((n,x)=>n+x.s,0)/scores.reduce((n,x)=>n+x.max,0)*100);
+  const lv=LEVELS.filter(l=>tot>=l[0]).pop();
+  const weakest=[...scores].sort((x,y)=>x.s/x.max-y.s/y.max).slice(0,3);
+  res.classList.remove('empty');
+  res.innerHTML=`<h2>Ditt resultat</h2>
+   <div class="level"><span class="pill">${lv[1]}</span><strong style="font-size:22px">${lv[2]}</strong><span class="mono" style="color:var(--muted)">${tot} %</span></div>
+   <div class="rows">${scores.map(x=>{const p=Math.round(x.s/x.max*100);return `<div class="row"><span class="name">${x.a.name}</span><span class="track"><i style="width:${p}%;background:${color(p)}"></i></span><span class="pct">${p} %</span></div>`}).join('')}</div>
+   <div><h3 style="font-size:20px;margin-bottom:12px">Tre nästa steg för er</h3>
+   <ol class="next">${weakest.map(x=>`<li><div><b>${ADVICE[x.a.id][0]}</b>${ADVICE[x.a.id][1]}</div></li>`).join('')}</ol></div>
+   <button class="btn" type="button" id="reset">Börja om</button>`;
+  document.getElementById('reset').onclick=()=>{form.reset();update();window.scrollTo({top:0,behavior:'smooth'})};
+}
+form.addEventListener('change',update);
+document.getElementById('copy').addEventListener('click',async e=>{
+  const b=e.currentTarget;
+  try{await navigator.clipboard.writeText(document.getElementById('mail').textContent);b.textContent='Kopierad';}
+  catch{const r=document.createRange();r.selectNodeContents(document.getElementById('mail'));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Markerad, kopiera manuellt';}
+  setTimeout(()=>b.textContent='Kopiera adress',2500);
+});
+update();
+</script>
+</body></html>
